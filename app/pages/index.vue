@@ -26,21 +26,46 @@ const copied = ref(false)
 const converted = ref<FeatureCollection | null>(null)
 const isConverting = ref(false)
 
-const crsOptions = [
-  { label: 'WGS 84', value: 'EPSG:4326', description: 'Geografische lengte-/breedtegraad' },
-  { label: 'Web Mercator', value: 'EPSG:3857', description: 'Webkaarten en tiles' },
-  { label: 'RD New (Amersfoort)', value: 'EPSG:28992', description: 'Nederland' },
-  { label: 'ETRS89 / UTM zone 32N', value: 'EPSG:25832', description: 'Europa' },
-  { label: 'WGS 84 / UTM zone 32N', value: 'EPSG:32632', description: 'Europa' },
-  { label: 'WGS 84 / UTM zone 31N', value: 'EPSG:32631', description: 'Europa' },
-  { label: 'WGS 84 / UTM zone 33N', value: 'EPSG:32633', description: 'Europa' },
-  { label: 'NAD83 / UTM zone 10N', value: 'EPSG:26910', description: 'Noord-Amerika' }
+const commonCrsOptions = [
+  { label: 'WGS 84 · EPSG:4326', value: 'EPSG:4326', description: 'Geografische lengte-/breedtegraad' },
+  { label: 'WGS 84 3D · EPSG:4979', value: 'EPSG:4979', description: 'Lengtegraad, breedtegraad en hoogte' },
+  { label: 'Web Mercator · EPSG:3857', value: 'EPSG:3857', description: 'Webkaarten en tiles' },
+  { label: 'RD New (Amersfoort) · EPSG:28992', value: 'EPSG:28992', description: 'Nederland' },
+  { label: 'ETRS89 / UTM 32N · EPSG:25832', value: 'EPSG:25832', description: 'Europa' },
+  { label: 'ETRS89 / UTM 31N · EPSG:25831', value: 'EPSG:25831', description: 'Europa' },
+  { label: 'NAD83 / Conus Albers · EPSG:5070', value: 'EPSG:5070', description: 'Verenigde Staten' },
+  { label: 'British National Grid · EPSG:27700', value: 'EPSG:27700', description: 'Verenigd Koninkrijk' },
+  { label: 'Amersfoort / RD Old · EPSG:28991', value: 'EPSG:28991', description: 'Nederland' },
+  { label: 'Belgian Lambert 2008 · EPSG:3812', value: 'EPSG:3812', description: 'België' },
+  { label: 'Lambert-93 · EPSG:2154', value: 'EPSG:2154', description: 'Frankrijk' },
+  { label: 'ETRS89 / LAEA Europe · EPSG:3035', value: 'EPSG:3035', description: 'Europa' },
+  { label: 'Swiss CH1903+ / LV95 · EPSG:2056', value: 'EPSG:2056', description: 'Zwitserland' },
+  { label: 'GDA2020 / MGA zone 55 · EPSG:7855', value: 'EPSG:7855', description: 'Australië' },
+  { label: 'S-JTSK / Krovak East North · EPSG:5514', value: 'EPSG:5514', description: 'Tsjechië' },
+  { label: 'NZGD2000 / New Zealand TM · EPSG:2193', value: 'EPSG:2193', description: 'Nieuw-Zeeland' },
+  { label: 'NAD83 / California zone 5 · EPSG:2229', value: 'EPSG:2229', description: 'Verenigde Staten' },
+  { label: 'World Mollweide · ESRI:54009', value: 'ESRI:54009', description: 'Wereldprojectie' },
+  { label: 'OGC:CRS84', value: 'OGC:CRS84', description: 'WGS84 met longitude, latitude-asvolgorde' }
 ]
+
+const utmOptions = Array.from({ length: 60 }, (_, index) => {
+  const zone = index + 1
+  return [
+    { label: `WGS 84 / UTM zone ${zone}N · EPSG:${32600 + zone}`, value: `EPSG:${32600 + zone}`, description: 'WGS 84 UTM noordelijk halfrond' },
+    { label: `WGS 84 / UTM zone ${zone}S · EPSG:${32700 + zone}`, value: `EPSG:${32700 + zone}`, description: 'WGS 84 UTM zuidelijk halfrond' }
+  ]
+}).flat()
+
+const crsOptions = [...commonCrsOptions, ...utmOptions]
 
 function findCrs(value: any): string {
   const raw = value?.crs?.properties?.name || value?.crs?.properties?.href || ''
-  const match = String(raw).match(/EPSG(?::|::|\/)?(\d+)/i)
-  return match ? `EPSG:${match[1]}` : 'EPSG:4326'
+  const normalized = String(raw)
+  if (/OGC(?::|\/).*CRS84/i.test(normalized)) return 'OGC:CRS84'
+  const match = normalized.match(/(EPSG|ESRI)(?::|::|\/)?(\d+)/i)
+  const authority = match?.[1]
+  const code = match?.[2]
+  return authority && code ? `${authority.toUpperCase()}:${code}` : 'EPSG:4326'
 }
 
 function parseInput() {
@@ -159,7 +184,7 @@ useSeoMeta({
       </NuxtLink>
       <div class="topbar-actions">
         <span class="privacy-note"><UIcon name="i-lucide-shield-check" /> {{ t('privacy') }}</span>
-        <UButton icon="i-lucide-sun-moon" color="neutral" variant="ghost" aria-label="Toggle color mode" @click="toggleColorMode()" />
+        <UButton icon="i-lucide-sun-moon" color="neutral" variant="ghost" :aria-label="t('toggleColorMode')" @click="toggleColorMode()" />
         <UButton color="neutral" variant="soft" size="sm" @click="toggleLocale">{{ locale.toUpperCase() }}</UButton>
       </div>
     </header>
@@ -167,11 +192,11 @@ useSeoMeta({
     <main class="workspace">
       <section class="hero">
         <div>
-          <p class="eyebrow">GEOJSON TOOLKIT</p>
+          <p class="eyebrow">{{ t('toolkit') }}</p>
           <h1>{{ t('tagline') }}</h1>
-          <p class="hero-copy">Transform, draw and export spatial data with confidence.</p>
+          <p class="hero-copy">{{ t('heroCopy') }}</p>
         </div>
-        <div class="hero-badge"><UIcon name="i-lucide-zap" /> Client-side only</div>
+        <div class="hero-badge"><UIcon name="i-lucide-zap" /> {{ t('clientOnly') }}</div>
       </section>
 
       <div class="tool-grid">
@@ -181,7 +206,7 @@ useSeoMeta({
             <UBadge color="neutral" variant="subtle">{{ t('features', { count: featureCount }) }}</UBadge>
           </div>
           <p class="panel-help">{{ t('pasteHint') }}</p>
-          <UTextarea v-model="inputText" :rows="14" autoresize class=" w-full" spellcheck="false" @blur="parseInput" />
+          <UTextarea v-model="inputText" :rows="14" autoresize class="w-full" spellcheck="false" @blur="parseInput" />
           <p v-if="errorMessage" class="error-text"><UIcon name="i-lucide-circle-alert" /> {{ errorMessage }}</p>
           <div class="crs-row">
             <div class="field">
@@ -192,6 +217,13 @@ useSeoMeta({
             <div class="field">
               <label>{{ t('targetCrs') }}</label>
               <USelectMenu v-model="targetCrs" :items="crsOptions" value-key="value" label-key="label" :search-input="{ placeholder: t('searchCrs') }" />
+              <UInput
+                v-model="targetCrs"
+                class="mt-2"
+                icon="i-lucide-code-2"
+                :placeholder="t('customCrs')"
+                :aria-label="t('customCrsLabel')"
+              />
             </div>
           </div>
           <UButton block size="lg" icon="i-lucide-repeat-2" :loading="isConverting" @click="convert">{{ t('convert') }}</UButton>
@@ -200,10 +232,10 @@ useSeoMeta({
         <section class="panel map-panel">
           <div class="panel-heading">
             <div><span class="step">02</span><h2>{{ t('preview') }}</h2></div>
-            <span class="map-source"><span class="live-dot" /> OpenFreeMap · Liberty</span>
+            <span class="map-source"><span class="live-dot" /> {{ t('mapSource') }}</span>
           </div>
           <GeoMap :model-value="geojson" @update:model-value="geometryToFeatureCollection" />
-          <p class="map-note"><UIcon name="i-lucide-info" /> {{ t('draw') }} a shape, then edit its vertices directly on the map.</p>
+          <p class="map-note"><UIcon name="i-lucide-info" /> {{ t('mapNote') }}</p>
         </section>
       </div>
 

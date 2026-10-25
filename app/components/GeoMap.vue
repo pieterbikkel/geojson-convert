@@ -18,6 +18,7 @@ const map = shallowRef<any>()
 const draw = shallowRef<any>()
 const activeTool = ref<'polygon' | 'circle' | 'rectangle' | 'square' | null>(null)
 let shapeStart: [number, number] | null = null
+let isShapeDragging = false
 
 const tools = [
   { id: 'polygon', icon: 'i-lucide-pentagon' },
@@ -95,13 +96,33 @@ function createCircle(center: [number, number], edge: [number, number]) {
   return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [coordinates] } }
 }
 
-function onMapClick(event: any) {
-  if (!activeTool.value || activeTool.value === 'polygon') return
-  const point: [number, number] = [event.lngLat.lng, event.lngLat.lat]
-  if (!shapeStart) {
-    shapeStart = point
-    return
-  }
+function setMapDrawingInteraction(enabled: boolean) {
+  if (!map.value) return
+  if (enabled) map.value.dragPan.enable()
+  else map.value.dragPan.disable()
+  map.value.getCanvas().style.cursor = enabled ? '' : 'crosshair'
+}
+
+function getCanvasPoint(event: Pick<MouseEvent, 'clientX' | 'clientY'>): [number, number] {
+  const rect = map.value.getCanvas().getBoundingClientRect()
+  const point = map.value.unproject([event.clientX - rect.left, event.clientY - rect.top])
+  return [point.lng, point.lat]
+}
+
+function onShapePointerDown(event: PointerEvent | MouseEvent) {
+  if (isShapeDragging || !activeTool.value || activeTool.value === 'polygon') return
+  event.preventDefault()
+  event.stopPropagation()
+  shapeStart = getCanvasPoint(event)
+  isShapeDragging = true
+  setMapDrawingInteraction(false)
+}
+
+function onShapePointerUp(event: PointerEvent | MouseEvent) {
+  if (!isShapeDragging || !shapeStart || !activeTool.value || activeTool.value === 'polygon') return
+  event.preventDefault()
+  event.stopPropagation()
+  const point = getCanvasPoint(event)
   const feature = activeTool.value === 'circle'
     ? createCircle(shapeStart, point)
     : createBox(shapeStart, point, activeTool.value === 'square')
@@ -109,22 +130,47 @@ function onMapClick(event: any) {
   draw.value.add(feature)
   activeTool.value = null
   shapeStart = null
+  isShapeDragging = false
+  setMapDrawingInteraction(true)
   draw.value.changeMode('simple_select')
   emitDrawn()
+}
+
+function cancelShapePointer(event: PointerEvent) {
+  if (!isShapeDragging) return
+  event.preventDefault()
+  isShapeDragging = false
+  shapeStart = null
+  activeTool.value = null
+  setMapDrawingInteraction(true)
+}
+
+function onShapeMouseDown(event: MouseEvent) {
+  if (event.target !== map.value?.getCanvas()) return
+  onShapePointerDown(event)
+}
+
+function onShapeMouseUp(event: MouseEvent) {
+  if (!isShapeDragging) return
+  onShapePointerUp(event)
 }
 
 async function selectTool(tool: typeof tools[number]['id']) {
   if (!map.value || !draw.value) return
   shapeStart = null
+  isShapeDragging = false
   activeTool.value = tool
   if (tool === 'polygon') draw.value.changeMode('draw_polygon')
   else draw.value.changeMode('simple_select')
+  setMapDrawingInteraction(tool === 'polygon')
 }
 
 function clearDrawing() {
   draw.value?.deleteAll()
   activeTool.value = null
   shapeStart = null
+  isShapeDragging = false
+  setMapDrawingInteraction(true)
   emit('update:modelValue', null)
   renderGeoJson(null)
 }
@@ -150,7 +196,14 @@ onMounted(async () => {
   draw.value = new MapboxDraw({ displayControlsDefault: false })
   map.value.addControl(draw.value)
   map.value.on('load', () => renderGeoJson(props.modelValue))
-  map.value.on('click', onMapClick)
+  const canvas = map.value.getCanvas()
+  canvas.addEventListener('pointerdown', onShapePointerDown)
+  canvas.addEventListener('pointerup', onShapePointerUp)
+  canvas.addEventListener('pointercancel', cancelShapePointer)
+  window.addEventListener('mousedown', onShapeMouseDown)
+  window.addEventListener('mouseup', onShapeMouseUp)
+  window.addEventListener('pointerup', onShapePointerUp)
+  window.addEventListener('pointercancel', cancelShapePointer)
   map.value.on('draw.create', emitDrawn)
   map.value.on('draw.update', emitDrawn)
 })
@@ -159,7 +212,18 @@ watch(() => props.modelValue, (value) => {
   renderGeoJson(value)
 }, { deep: true })
 
-onBeforeUnmount(() => map.value?.remove())
+onBeforeUnmount(() => {
+  setMapDrawingInteraction(true)
+  const canvas = map.value?.getCanvas()
+  canvas?.removeEventListener('pointerdown', onShapePointerDown)
+  canvas?.removeEventListener('pointerup', onShapePointerUp)
+  canvas?.removeEventListener('pointercancel', cancelShapePointer)
+  window.removeEventListener('mousedown', onShapeMouseDown)
+  window.removeEventListener('mouseup', onShapeMouseUp)
+  window.removeEventListener('pointerup', onShapePointerUp)
+  window.removeEventListener('pointercancel', cancelShapePointer)
+  map.value?.remove()
+})
 
 defineExpose({ selectTool, clearDrawing, editDrawing })
 </script>
@@ -187,7 +251,7 @@ defineExpose({ selectTool, clearDrawing, editDrawing })
       </UTooltip>
     </div>
     <div v-if="activeTool && activeTool !== 'polygon'" class="map-hint">
-      {{ $t('draw') }}: {{ $t(activeTool) }} — click twice on the map
+      {{ $t('drawHint', { shape: $t(activeTool) }) }}
     </div>
   </div>
 </template>
