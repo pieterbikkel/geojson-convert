@@ -1,78 +1,98 @@
-# Nuxt Starter Template
+# GeoConvert
 
-[![Nuxt UI](https://img.shields.io/badge/Made%20with-Nuxt%20UI-00DC82?logo=nuxt&labelColor=020420)](https://ui.nuxt.com)
+GeoConvert is a browser-based GeoJSON coordinate reference system (CRS)
+converter. Paste or edit GeoJSON, select the source and target CRS, and
+convert the coordinates directly in the browser. The result can be reviewed
+on a map and copied for use in another application.
 
-Use this template to get started with [Nuxt UI](https://ui.nuxt.com) quickly.
+## Live application
 
-- [Live demo](https://starter-template.nuxt.dev/)
-- [Documentation](https://ui.nuxt.com/docs/getting-started/installation/nuxt)
+The production application is available at
+[geojson.bikkel.pro](https://geojson.bikkel.pro).
 
-<a href="https://starter-template.nuxt.dev/" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-    <img alt="Nuxt Starter Template" src="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png" width="830" height="466">
-  </picture>
-</a>
+## Features
 
-> The starter template for Vue is on https://github.com/nuxt-ui-templates/starter-vue.
+- Convert GeoJSON `FeatureCollection`, `Feature`, and geometry objects.
+- Detect a CRS from the input when it is included in the GeoJSON.
+- Select from common CRS definitions and all WGS 84 UTM zones.
+- Preview GeoJSON on an interactive MapLibre map.
+- Copy converted GeoJSON to the clipboard.
+- English and Dutch interface translations.
+- Light and dark color modes.
 
-## Quick Start
+## Technology
 
-```bash [Terminal]
-npm create nuxt@latest -- -t ui
-```
+- [Nuxt](https://nuxt.com/) 4
+- [Vue](https://vuejs.org/)
+- [Nuxt UI](https://ui.nuxt.com/)
+- [MapLibre GL JS](https://maplibre.org/)
+- [terrio-js](https://www.npmjs.com/package/terrio-js) for coordinate
+  transformations
+- [pnpm](https://pnpm.io/) for package management
 
-## Deploy your own
+## Local development
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-name=starter&repository-url=https%3A%2F%2Fgithub.com%2Fnuxt-ui-templates%2Fstarter&demo-image=https%3A%2F%2Fui.nuxt.com%2Fassets%2Ftemplates%2Fnuxt%2Fstarter-dark.png&demo-url=https%3A%2F%2Fstarter-template.nuxt.dev%2F&demo-title=Nuxt%20Starter%20Template&demo-description=A%20minimal%20template%20to%20get%20started%20with%20Nuxt%20UI.)
-
-## Setup
-
-Make sure to install the dependencies:
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+Start the development server:
 
 ```bash
 pnpm dev
 ```
 
-## Production
+The application is then available at
+[`http://localhost:3000`](http://localhost:3000).
 
-Build the application for production:
+## Production build
+
+Build the Nuxt production bundle:
 
 ```bash
 pnpm build
 ```
 
-Locally preview production build:
+Preview the production build locally:
 
 ```bash
 pnpm preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Useful checks:
 
-## Docker
+```bash
+pnpm lint
+pnpm typecheck
+```
 
-Build and start the production container:
+## Docker deployment
+
+The repository includes a multi-stage [Dockerfile](./Dockerfile) and a
+production [Docker Compose configuration](./docker-compose.yml).
+
+Build and start the application:
 
 ```bash
 docker compose up --build -d
 ```
 
-The application is available at `http://localhost:3000`. To stop it:
+The container listens on port `3000` and is published on port `3000` on the
+host. On a server, put a reverse proxy such as Nginx, Caddy, or Traefik in
+front of it to terminate HTTPS and route
+`geojson.bikkel.pro` to `http://127.0.0.1:3000`.
+
+View the container status and logs:
+
+```bash
+docker compose ps
+docker compose logs -f
+```
+
+Stop the application:
 
 ```bash
 docker compose down
 ```
-
-## Renovate integration
-
-Install [Renovate GitHub app](https://github.com/apps/renovate/installations/select_target) on your repository and you are good to go.
