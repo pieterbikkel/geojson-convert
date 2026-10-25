@@ -8,7 +8,7 @@ on a map and copied for use in another application.
 ## Live application
 
 The production application is available at
-[geojson.bikkel.pro](https://geojson.bikkel.pro).
+[geoconvert.bikkel.pro](https://geoconvert.bikkel.pro).
 
 ## Features
 
